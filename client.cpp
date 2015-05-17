@@ -59,24 +59,28 @@ int main(int argc, char**argv) {
         cout << "getsockname error: " << UDT::getlasterror().getErrorMessage();
         return 0;
     }
-    if (UDT::ERROR == UDT::send(client, (const char*)&local_addr.sin_addr, 4, 0)) {
-        cout << "send local error:" << UDT::getlasterror().getErrorMessage() << endl;
+
+    char private_addr_and_port[6];
+    memcpy(private_addr_and_port, (char*)&local_addr.sin_addr, 4);
+    memcpy(private_addr_and_port + 4, (char*)&local_addr.sin_port, 2);
+
+    if (UDT::ERROR == UDT::send(client, (const char*)&private_addr_and_port, 6, 0)) {
+        cout << "send private error:" << UDT::getlasterror().getErrorMessage() << endl;
         return 0;
     }
 
-    char data[10];
-    if (UDT::ERROR == UDT::recv(client, data, 10, 0)) {
+    char data[12];
+    if (UDT::ERROR == UDT::recv(client, data, 12, 0)) {
         cout << "recv error:" << UDT::getlasterror().getErrorMessage() << endl;
         return 0;
     }
 
     sockaddr_in peer_addr;
     peer_addr.sin_family = AF_INET;
-    inet_pton(AF_INET, "10.23.8.7", data + 6); 
     peer_addr.sin_addr.s_addr = *(uint32_t*)(data + 6);
-    peer_addr.sin_port = *(uint16_t*)(data + 4);
+    peer_addr.sin_port = *(uint16_t*)(data + 10);
 
-    cout << "addr received: " << inet_ntoa(peer_addr.sin_addr) << ":" << ntohs(peer_addr.sin_port) << endl;
+    cout << "private peer addr received: " << inet_ntoa(peer_addr.sin_addr) << ":" << ntohs(peer_addr.sin_port) << endl;
     UDT::close(client);
 
     client = UDT::socket(AF_INET, SOCK_STREAM, 0);
@@ -96,7 +100,10 @@ int main(int argc, char**argv) {
 
 try_public:
     peer_addr.sin_addr.s_addr = *(uint32_t*) (data);
+    peer_addr.sin_port = *(uint16_t*)(data + 4);
     client = UDT::socket(AF_INET, SOCK_STREAM, 0);
+    cout << "public peer addr received: " << inet_ntoa(peer_addr.sin_addr) << ":" << ntohs(peer_addr.sin_port) << endl;
+
     UDT::setsockopt(client, 0, UDT_RENDEZVOUS, &rendezvous, sizeof(bool));
 
     if (UDT::ERROR == UDT::bind(client, (sockaddr*)&my_addr, sizeof(my_addr))) {
