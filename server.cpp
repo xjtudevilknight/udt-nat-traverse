@@ -26,35 +26,38 @@ int main() {
         int namelen;
         sockaddr_in recver1addr, recver2addr;
         char ip[16];
-        char data[6];
+        char data[10];
         cout << "waiting for connections\n";
 
         UDTSOCKET recver1 = UDT::accept(serv, (sockaddr*)&recver1addr, &namelen);
 
-        char private_addr[4];
-        if (UDT::ERROR == UDT::recv(recver1, private_addr, 4, 0)) {
+        char private_addr1[4];
+        if (UDT::ERROR == UDT::recv(recver1, private_addr1, 4, 0)) {
             cout << "recv error:" << UDT::getlasterror().getErrorMessage() << endl;
             return 0;
         }
 
-        cout << "new connection: " << inet_ntoa(recver1addr.sin_addr) << ":" << ntohs(recver1addr.sin_port) <<", local_addr: "<<inet_ntoa(*reinterpret_cast<in_addr*>(private_addr))<< endl;
+        cout << "new connection: " << inet_ntoa(recver1addr.sin_addr) << ":" << ntohs(recver1addr.sin_port) <<", local_addr: "<<inet_ntoa(*reinterpret_cast<in_addr*>(private_addr1))<< endl;
 
         UDTSOCKET recver2 = UDT::accept(serv, (sockaddr*)&recver2addr, &namelen);
-        if (UDT::ERROR == UDT::recv(recver2, private_addr, 4, 0)) {
+        char private_addr2[4];
+        if (UDT::ERROR == UDT::recv(recver2, private_addr2, 4, 0)) {
             cout << "recv error:" << UDT::getlasterror().getErrorMessage() << endl;
             return 0;
         }
-        cout << "new connection: " << inet_ntoa(recver2addr.sin_addr) << ":" << ntohs(recver2addr.sin_port) <<", local_addr: "<<inet_ntoa(*reinterpret_cast<in_addr*>(private_addr))<< endl;
+        cout << "new connection: " << inet_ntoa(recver2addr.sin_addr) << ":" << ntohs(recver2addr.sin_port) <<", local_addr: "<<inet_ntoa(*reinterpret_cast<in_addr*>(private_addr2))<< endl;
 
         cout << "sending addresses\n";
         *(uint32_t*)data = recver2addr.sin_addr.s_addr;
         *(uint16_t*)(data + 4) = recver2addr.sin_port;
-        UDT::send(recver1, data, 6, 0);
+        memcpy(data + 6, private_addr2, 4);
+        UDT::send(recver1, data, 10, 0);
 
 
         *(uint32_t*)data = recver1addr.sin_addr.s_addr;
         *(uint16_t*)(data + 4) = recver1addr.sin_port;
-        UDT::send(recver2, data, 6, 0);
+        memcpy(data + 6, private_addr1, 4);
+        UDT::send(recver2, data, 10, 0);
 
         UDT::close(recver1);
         UDT::close(recver2);

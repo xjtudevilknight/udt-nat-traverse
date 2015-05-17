@@ -64,15 +64,16 @@ int main(int argc, char**argv) {
         return 0;
     }
 
-    char data[6];
-    if (UDT::ERROR == UDT::recv(client, data, 6, 0)) {
+    char data[10];
+    if (UDT::ERROR == UDT::recv(client, data, 10, 0)) {
         cout << "recv error:" << UDT::getlasterror().getErrorMessage() << endl;
         return 0;
     }
 
     sockaddr_in peer_addr;
     peer_addr.sin_family = AF_INET;
-    peer_addr.sin_addr.s_addr = *(uint32_t*)data;
+    inet_pton(AF_INET, "10.23.8.7", data + 6); 
+    peer_addr.sin_addr.s_addr = *(uint32_t*)(data + 6);
     peer_addr.sin_port = *(uint16_t*)(data + 4);
 
     cout << "addr received: " << inet_ntoa(peer_addr.sin_addr) << ":" << ntohs(peer_addr.sin_port) << endl;
@@ -83,14 +84,32 @@ int main(int argc, char**argv) {
     UDT::setsockopt(client, 0, UDT_RENDEZVOUS, &rendezvous, sizeof(bool));
 
     if (UDT::ERROR == UDT::bind(client, (sockaddr*)&my_addr, sizeof(my_addr))) {
-        cout << "bind error: " << UDT::getlasterror().getErrorMessage();
+        cout << "bind for connect private peer error: " << UDT::getlasterror().getErrorMessage()<<endl;
+        goto try_public;
+    }
+
+    if (UDT::ERROR == UDT::connect(client, (sockaddr*)&peer_addr, sizeof(peer_addr))) {
+        cout << "connect private peer error: " << UDT::getlasterror().getErrorMessage()<<endl;
+        goto try_public;
+    }
+    goto success;
+
+try_public:
+    peer_addr.sin_addr.s_addr = *(uint32_t*) (data);
+    client = UDT::socket(AF_INET, SOCK_STREAM, 0);
+    UDT::setsockopt(client, 0, UDT_RENDEZVOUS, &rendezvous, sizeof(bool));
+
+    if (UDT::ERROR == UDT::bind(client, (sockaddr*)&my_addr, sizeof(my_addr))) {
+        cout << "bind for connect peer error: " << UDT::getlasterror().getErrorMessage()<<endl;
         return 0;
     }
 
     if (UDT::ERROR == UDT::connect(client, (sockaddr*)&peer_addr, sizeof(peer_addr))) {
-        cout << "connect error: " << UDT::getlasterror().getErrorMessage();
-        return 42;
+        cout << "connect peer error: " << UDT::getlasterror().getErrorMessage()<<endl;
+        return 0;
     }
+
+success:
     cout << "SUCCESS!\n";
     sleep(2); // give another client time to connect too
 
