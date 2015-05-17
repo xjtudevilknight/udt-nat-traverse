@@ -30,10 +30,21 @@ int main() {
         cout << "waiting for connections\n";
 
         UDTSOCKET recver1 = UDT::accept(serv, (sockaddr*)&recver1addr, &namelen);
-        cout << "new connection: " << inet_ntoa(recver1addr.sin_addr) << ":" << ntohs(recver1addr.sin_port) << endl;
+
+        char private_addr[4];
+        if (UDT::ERROR == UDT::recv(recver1, private_addr, 4, 0)) {
+            cout << "recv error:" << UDT::getlasterror().getErrorMessage() << endl;
+            return 0;
+        }
+
+        cout << "new connection: " << inet_ntoa(recver1addr.sin_addr) << ":" << ntohs(recver1addr.sin_port) <<", local_addr: "<<inet_ntoa(*reinterpret_cast<in_addr*>(private_addr))<< endl;
 
         UDTSOCKET recver2 = UDT::accept(serv, (sockaddr*)&recver2addr, &namelen);
-        cout << "new connection: " << inet_ntoa(recver2addr.sin_addr) << ":" << ntohs(recver2addr.sin_port) << endl;
+        if (UDT::ERROR == UDT::recv(recver2, private_addr, 4, 0)) {
+            cout << "recv error:" << UDT::getlasterror().getErrorMessage() << endl;
+            return 0;
+        }
+        cout << "new connection: " << inet_ntoa(recver2addr.sin_addr) << ":" << ntohs(recver2addr.sin_port) <<", local_addr: "<<inet_ntoa(*reinterpret_cast<in_addr*>(private_addr))<< endl;
 
         cout << "sending addresses\n";
         *(uint32_t*)data = recver2addr.sin_addr.s_addr;

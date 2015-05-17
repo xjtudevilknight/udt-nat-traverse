@@ -9,14 +9,24 @@
 using namespace std;
 using namespace UDT;
 
-int main() {
+void Usage() {
+    cout<<"Usage: client <ServerIP>"<<endl;
+}
+
+int main(int argc, char**argv) {
+    if (argc != 2) {
+        Usage();
+        return 0;
+    }
     UDTSOCKET client = UDT::socket(AF_INET, SOCK_STREAM, 0);
 
     sockaddr_in serv_addr;
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(6890);
-    inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr);   // server address here
+    inet_pton(AF_INET, argv[1], &serv_addr.sin_addr);   // server address here
     memset(&(serv_addr.sin_zero), '\0', 8);
+
+    sockaddr_in local_addr;
 
     // selecting random local port
     srand(time(NULL));
@@ -42,6 +52,16 @@ int main() {
     if (UDT::ERROR == UDT::connect(client, (sockaddr*)&serv_addr, sizeof(serv_addr))) {
         cout << "connect error: " << UDT::getlasterror().getErrorMessage();
         return 42;
+    }
+
+    int socklen = sizeof(local_addr);
+    if (UDT::ERROR == UDT::getsockname(client, (sockaddr*)&local_addr, &socklen)) {
+        cout << "getsockname error: " << UDT::getlasterror().getErrorMessage();
+        return 0;
+    }
+    if (UDT::ERROR == UDT::send(client, (const char*)&local_addr.sin_addr, 4, 0)) {
+        cout << "send local error:" << UDT::getlasterror().getErrorMessage() << endl;
+        return 0;
     }
 
     char data[6];
