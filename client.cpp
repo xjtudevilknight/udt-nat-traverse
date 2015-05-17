@@ -82,9 +82,9 @@ int main(int argc, char**argv) {
 
     cout << "private peer addr received: " << inet_ntoa(peer_addr.sin_addr) << ":" << ntohs(peer_addr.sin_port) << endl;
     UDT::close(client);
-
-    client = UDT::socket(AF_INET, SOCK_STREAM, 0);
     bool rendezvous = true;
+    goto try_public;
+    client = UDT::socket(AF_INET, SOCK_STREAM, 0);
     UDT::setsockopt(client, 0, UDT_RENDEZVOUS, &rendezvous, sizeof(bool));
 
     if (UDT::ERROR == UDT::bind(client, (sockaddr*)&my_addr, sizeof(my_addr))) {
